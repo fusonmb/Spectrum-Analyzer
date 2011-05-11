@@ -24,11 +24,8 @@
 #include <gst/gst.h>
 
 static guint spect_bands = 20;
-
-#define AUDIOFREQ 32000
-
-
-//scanf (  "%d", &spect_bands);
+static guint inputfreq = 16000;
+static guint AUDIOFREQ = 32000;
 
 /* receive spectral data from element message */
 static gboolean
@@ -75,17 +72,27 @@ int
 main (int argc, char *argv[])
 {
   GstElement *bin;
-  GstElement *src, *audioconvert, *spectrum, *sink;
+  GstElement *alsasrc, *audioconvert, *spectrum, *sink, *testsrc;
   GstBus *bus;
   GstCaps *caps;
   GMainLoop *loop;
 
-  gst_init (&argc, &argv);
 
+  gst_init (&argc, &argv);
+	g_print("Enter Upper Frequency Bound:");
+	scanf("%d" , &inputfreq);
+	AUDIOFREQ = (inputfreq * 2);
+	g_print("Enter Number of Frequncy Bands:");
+	scanf("%d" , &spect_bands);
   bin = gst_pipeline_new ("bin");
 
-  src = gst_element_factory_make ("audiotestsrc", "src");
-  g_object_set (G_OBJECT (src), "wave", 0, "freq", 6000.0, NULL);
+  testsrc = gst_element_factory_make ("audiotestsrc", "src");
+  g_object_set (G_OBJECT (testsrc), "wave", 0, "freq", 6000.0, NULL);
+  	
+	alsasrc = gst_element_factory_make ("alsasrc", NULL);
+	g_assert ( alsasrc);
+
+
   audioconvert = gst_element_factory_make ("audioconvert", NULL);
   g_assert (audioconvert);
 
@@ -96,12 +103,14 @@ main (int argc, char *argv[])
   sink = gst_element_factory_make ("fakesink", "sink");
   g_object_set (G_OBJECT (sink), "sync", TRUE, NULL);
 
-  gst_bin_add_many (GST_BIN (bin), src, audioconvert, spectrum, sink, NULL);
+  gst_bin_add_many (GST_BIN (bin), testsrc, audioconvert, spectrum, sink, NULL);
+//	gst_bin_add_many (GST_BIN (bin), alsasrc, audioconvert, spectrum, sink, NULL);
 
   caps = gst_caps_new_simple ("audio/x-raw-int",
       "rate", G_TYPE_INT, AUDIOFREQ, NULL);
 
-  if (!gst_element_link (src, audioconvert) ||
+  if (!gst_element_link (testsrc, audioconvert) ||
+	//!gst_element_link (alsasrc, audioconvert) ||
       !gst_element_link_filtered (audioconvert, spectrum, caps) ||
       !gst_element_link (spectrum, sink)) {
     fprintf (stderr, "can't link elements\n");
@@ -122,7 +131,7 @@ main (int argc, char *argv[])
   gst_element_set_state (bin, GST_STATE_NULL);
 
   gst_object_unref (bin);
-
+		
   return 0;
 }
 

@@ -24,11 +24,8 @@
 #include <gst/gst.h>
 
 static guint spect_bands = 20;
-
-#define AUDIOFREQ 32000
-
-
-//scanf (  "%d", &spect_bands);
+static guint inputfreq = 16000;
+static guint AUDIOFREQ = 32000;
 
 /* receive spectral data from element message */
 static gboolean
@@ -49,8 +46,8 @@ message_handler (GstBus * bus, GstMessage * message, gpointer data)
       if (!gst_structure_get_clock_time (s, "endtime", &endtime))
         endtime = GST_CLOCK_TIME_NONE;
 
-      g_print ("New spectrum message, endtime %" GST_TIME_FORMAT "\n",
-          GST_TIME_ARGS (endtime));
+     // g_print ("New spectrum message, endtime %" GST_TIME_FORMAT "\n",
+     //     GST_TIME_ARGS (endtime));
 
       magnitudes = gst_structure_get_value (s, "magnitude");
       phases = gst_structure_get_value (s, "phase");
@@ -61,18 +58,18 @@ message_handler (GstBus * bus, GstMessage * message, gpointer data)
         phase = gst_value_list_get_value (phases, i);
 
         if (mag != NULL && phase != NULL) {
-          g_print ("band %d (freq %g): magnitude %f dB phase %f\n", i, freq,
-              g_value_get_float (mag), g_value_get_float (phase));
+          g_print ("%g %f\n", freq, g_value_get_float (mag));
+	  	
         }
       }
-      g_print ("\n");
+	//system(" perl rtgnuplotter.pl");
     }
   }
   return TRUE;
 }
 
 int
-main (int argc, char *argv[])
+spectrum_run (int argc, char *argv[])
 {
   GstElement *bin;
   GstElement *src, *audioconvert, *spectrum, *sink;
@@ -81,6 +78,12 @@ main (int argc, char *argv[])
   GMainLoop *loop;
 
   gst_init (&argc, &argv);
+
+//	g_print("Enter Upper Frequency Bound:");
+//	scanf("%d" , &inputfreq);
+//	AUDIOFREQ = (inputfreq * 2);
+//	g_print("Enter Number of Frequncy Bands:");
+//	scanf("%d" , &spect_bands);
 
   bin = gst_pipeline_new ("bin");
 
@@ -118,10 +121,18 @@ main (int argc, char *argv[])
   /* we need to run a GLib main loop to get the messages */
   loop = g_main_loop_new (NULL, FALSE);
   g_main_loop_run (loop);
-
+	
   gst_element_set_state (bin, GST_STATE_NULL);
 
   gst_object_unref (bin);
+	
+  return 0;
+}
+
+int
+main (int argc, char *argv[])
+{
+  spectrum_run(argc, argv);
 
   return 0;
 }

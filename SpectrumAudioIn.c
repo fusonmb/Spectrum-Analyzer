@@ -27,9 +27,6 @@ static guint spect_bands = 20;
 
 #define AUDIOFREQ 32000
 
-
-//scanf (  "%d", &spect_bands);
-
 /* receive spectral data from element message */
 static gboolean
 message_handler (GstBus * bus, GstMessage * message, gpointer data)
@@ -61,11 +58,11 @@ message_handler (GstBus * bus, GstMessage * message, gpointer data)
         phase = gst_value_list_get_value (phases, i);
 
         if (mag != NULL && phase != NULL) {
-          g_print ("band %d (freq %g): magnitude %f dB phase %f\n", i, freq,
-              g_value_get_float (mag), g_value_get_float (phase));
+          g_print ("%g %f\n", freq,
+              g_value_get_float (mag));
         }
       }
-      g_print ("\n");
+    //  g_print ("\n");
     }
   }
   return TRUE;
@@ -75,7 +72,7 @@ int
 main (int argc, char *argv[])
 {
   GstElement *bin;
-  GstElement *src, *audioconvert, *spectrum, *sink;
+  GstElement *alsasrc, *audioconvert, *spectrum, *sink, *mad, *src;
   GstBus *bus;
   GstCaps *caps;
   GMainLoop *loop;
@@ -86,6 +83,13 @@ main (int argc, char *argv[])
 
   src = gst_element_factory_make ("audiotestsrc", "src");
   g_object_set (G_OBJECT (src), "wave", 0, "freq", 6000.0, NULL);
+  	
+	alsasrc = gst_element_factory_make ("alsasrc", NULL);
+	g_assert ( alsasrc);
+
+	mad = gst_element_factory_make ("mad", NULL);
+	g_assert (mad);
+
   audioconvert = gst_element_factory_make ("audioconvert", NULL);
   g_assert (audioconvert);
 
@@ -96,12 +100,14 @@ main (int argc, char *argv[])
   sink = gst_element_factory_make ("fakesink", "sink");
   g_object_set (G_OBJECT (sink), "sync", TRUE, NULL);
 
-  gst_bin_add_many (GST_BIN (bin), src, audioconvert, spectrum, sink, NULL);
+  //gst_bin_add_many (GST_BIN (bin), src, audioconvert, spectrum, sink, NULL);
+	gst_bin_add_many (GST_BIN (bin), alsasrc, audioconvert, spectrum, sink, NULL);
 
   caps = gst_caps_new_simple ("audio/x-raw-int",
       "rate", G_TYPE_INT, AUDIOFREQ, NULL);
 
-  if (!gst_element_link (src, audioconvert) ||
+  if (//!gst_element_link (src, audioconvert) ||
+	!gst_element_link (alsasrc, audioconvert) ||
       !gst_element_link_filtered (audioconvert, spectrum, caps) ||
       !gst_element_link (spectrum, sink)) {
     fprintf (stderr, "can't link elements\n");
